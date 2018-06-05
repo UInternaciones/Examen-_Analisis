@@ -1,0 +1,1209 @@
+
+CREATE TABLE Administrador
+( 
+	Carnet               int(16)  NOT NULL ,
+	Puesto               varchar(15)  NOT NULL ,
+	Sueldo               float(5)  NULL ,
+	DPI                  int(7)  NOT NULL 
+)
+go
+
+
+
+ALTER TABLE Administrador
+	ADD CONSTRAINT XPKAdministrador PRIMARY KEY  CLUSTERED (Carnet ASC,DPI ASC)
+go
+
+
+
+CREATE TABLE Cliente
+( 
+	id_Cliente           int(7)  NOT NULL ,
+	Monedero             float(5)  NULL ,
+	nickname             varchar(15)  NOT NULL ,
+	Password             varchar(10)  NOT NULL ,
+	DPI                  int(7)  NOT NULL 
+)
+go
+
+
+
+ALTER TABLE Cliente
+	ADD CONSTRAINT XPKCliente PRIMARY KEY  CLUSTERED (id_Cliente ASC,DPI ASC)
+go
+
+
+
+CREATE TABLE Envio
+( 
+	id_Envio             int(10)  NOT NULL ,
+	Descripcion          varchar(max)  NULL ,
+	Total                float(5)  NOT NULL ,
+	Fecha_de_Creacion    varchar(10)  NOT NULL ,
+	Estado               binary  NOT NULL ,
+	id_Pedido            int(10)  NOT NULL ,
+	id_Cliente           int(7)  NOT NULL ,
+	DPI                  int(7)  NOT NULL ,
+	id_producto          int(6)  NOT NULL ,
+	No_Factura           int(10)  NOT NULL 
+)
+go
+
+
+
+ALTER TABLE Envio
+	ADD CONSTRAINT XPKEnvio PRIMARY KEY  CLUSTERED (id_Envio ASC,id_Pedido ASC,id_Cliente ASC,DPI ASC,id_producto ASC,No_Factura ASC)
+go
+
+
+
+CREATE TABLE Factura
+( 
+	No_Factura           int(10)  NOT NULL ,
+	Fecha                varchar(12)  NOT NULL ,
+	Total                float(5)  NOT NULL ,
+	id_Pedido            int(10)  NOT NULL ,
+	id_Cliente           int(7)  NOT NULL ,
+	DPI                  int(7)  NOT NULL ,
+	id_producto          int(6)  NOT NULL 
+)
+go
+
+
+
+ALTER TABLE Factura
+	ADD CONSTRAINT XPKFactura PRIMARY KEY  CLUSTERED (No_Factura ASC,id_Pedido ASC,id_Cliente ASC,DPI ASC,id_producto ASC)
+go
+
+
+
+CREATE TABLE Pedido
+( 
+	id_Pedido            int(10)  NOT NULL ,
+	Descripcion          varchar(max)  NULL ,
+	Fecha_Creacion       varchar(12)  NOT NULL ,
+	id_Cliente           int(7)  NOT NULL ,
+	DPI                  int(7)  NOT NULL ,
+	id_producto          int(6)  NOT NULL 
+)
+go
+
+
+
+ALTER TABLE Pedido
+	ADD CONSTRAINT XPKPedido PRIMARY KEY  CLUSTERED (id_Pedido ASC,id_Cliente ASC,DPI ASC,id_producto ASC)
+go
+
+
+
+CREATE TABLE Producto
+( 
+	id_producto          int(6)  NOT NULL ,
+	Nombre_Producto      varchar(15)  NOT NULL ,
+	Descripcion          varchar(50)  NULL ,
+	Precio_Unitario      float(5)  NOT NULL 
+)
+go
+
+
+
+ALTER TABLE Producto
+	ADD CONSTRAINT XPKProducto PRIMARY KEY  CLUSTERED (id_producto ASC)
+go
+
+
+
+CREATE TABLE Usuario
+( 
+	DPI                  int(7)  NOT NULL ,
+	Nombre_Usuario       varchar(25)  NOT NULL ,
+	Telefono             varchar(9)  NULL ,
+	Direccion            varchar(25)  NOT NULL ,
+	Correo               varchar(25)  NULL 
+)
+go
+
+
+
+ALTER TABLE Usuario
+	ADD CONSTRAINT XPKUsuario PRIMARY KEY  CLUSTERED (DPI ASC)
+go
+
+
+
+
+ALTER TABLE Administrador
+	ADD CONSTRAINT Usuario_Empleado FOREIGN KEY (DPI) REFERENCES Usuario(DPI)
+		ON DELETE NO ACTION
+		ON UPDATE NO ACTION
+go
+
+
+
+
+ALTER TABLE Cliente
+	ADD CONSTRAINT Usuario_Cliente FOREIGN KEY (DPI) REFERENCES Usuario(DPI)
+		ON DELETE NO ACTION
+		ON UPDATE NO ACTION
+go
+
+
+
+
+ALTER TABLE Envio
+	ADD CONSTRAINT Pedido_envio FOREIGN KEY (id_Pedido,id_Cliente,DPI,id_producto) REFERENCES Pedido(id_Pedido,id_Cliente,DPI,id_producto)
+		ON DELETE NO ACTION
+		ON UPDATE NO ACTION
+go
+
+
+
+
+ALTER TABLE Envio
+	ADD CONSTRAINT Factura_envio FOREIGN KEY (No_Factura,id_Pedido,id_Cliente,DPI,id_producto) REFERENCES Factura(No_Factura,id_Pedido,id_Cliente,DPI,id_producto)
+		ON DELETE NO ACTION
+		ON UPDATE NO ACTION
+go
+
+
+
+
+ALTER TABLE Factura
+	ADD CONSTRAINT Pedido_Factura FOREIGN KEY (id_Pedido,id_Cliente,DPI,id_producto) REFERENCES Pedido(id_Pedido,id_Cliente,DPI,id_producto)
+		ON DELETE NO ACTION
+		ON UPDATE NO ACTION
+go
+
+
+
+
+ALTER TABLE Pedido
+	ADD CONSTRAINT Cliente_Pedido FOREIGN KEY (id_Cliente,DPI) REFERENCES Cliente(id_Cliente,DPI)
+		ON DELETE NO ACTION
+		ON UPDATE NO ACTION
+go
+
+
+
+
+ALTER TABLE Pedido
+	ADD CONSTRAINT Producto_pedido FOREIGN KEY (id_producto) REFERENCES Producto(id_producto)
+		ON DELETE NO ACTION
+		ON UPDATE NO ACTION
+go
+
+
+
+
+CREATE TRIGGER tD_Administrador ON Administrador FOR DELETE AS
+/* ERwin Builtin Trigger */
+/* DELETE trigger on Administrador */
+BEGIN
+  DECLARE  @errno   int,
+           @errmsg  varchar(255)
+    /* ERwin Builtin Trigger */
+    /* Usuario  Administrador on child delete no action */
+    /* ERWIN_RELATION:CHECKSUM="000134bc", PARENT_OWNER="", PARENT_TABLE="Usuario"
+    CHILD_OWNER="", CHILD_TABLE="Administrador"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Usuario_Empleado", FK_COLUMNS="DPI" */
+    IF EXISTS (SELECT * FROM deleted,Usuario
+      WHERE
+        /* %JoinFKPK(deleted,Usuario," = "," AND") */
+        deleted.DPI = Usuario.DPI AND
+        NOT EXISTS (
+          SELECT * FROM Administrador
+          WHERE
+            /* %JoinFKPK(Administrador,Usuario," = "," AND") */
+            Administrador.DPI = Usuario.DPI
+        )
+    )
+    BEGIN
+      SELECT @errno  = 30010,
+             @errmsg = 'Cannot delete last Administrador because Usuario exists.'
+      GOTO ERROR
+    END
+
+
+    /* ERwin Builtin Trigger */
+    RETURN
+ERROR:
+    raiserror @errno @errmsg
+    rollback transaction
+END
+
+go
+
+
+CREATE TRIGGER tU_Administrador ON Administrador FOR UPDATE AS
+/* ERwin Builtin Trigger */
+/* UPDATE trigger on Administrador */
+BEGIN
+  DECLARE  @NUMROWS int,
+           @nullcnt int,
+           @validcnt int,
+           @insCarnet int(16), 
+           @insDPI int(7),
+           @errno   int,
+           @errmsg  varchar(255)
+
+  SELECT @NUMROWS = @@rowcount
+  /* ERwin Builtin Trigger */
+  /* Usuario  Administrador on child update no action */
+  /* ERWIN_RELATION:CHECKSUM="00014999", PARENT_OWNER="", PARENT_TABLE="Usuario"
+    CHILD_OWNER="", CHILD_TABLE="Administrador"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Usuario_Empleado", FK_COLUMNS="DPI" */
+  IF
+    /* %ChildFK(" OR",UPDATE) */
+    UPDATE(DPI)
+  BEGIN
+    SELECT @nullcnt = 0
+    SELECT @validcnt = count(*)
+      FROM inserted,Usuario
+        WHERE
+          /* %JoinFKPK(inserted,Usuario) */
+          inserted.DPI = Usuario.DPI
+    /* %NotnullFK(inserted," IS NULL","select @nullcnt = count(*) from inserted where"," AND") */
+    
+    IF @validcnt + @nullcnt != @NUMROWS
+    BEGIN
+      SELECT @errno  = 30007,
+             @errmsg = 'Cannot update Administrador because Usuario does not exist.'
+      GOTO ERROR
+    END
+  END
+
+
+  /* ERwin Builtin Trigger */
+  RETURN
+ERROR:
+    raiserror @errno @errmsg
+    rollback transaction
+END
+
+go
+
+
+
+
+CREATE TRIGGER tD_Cliente ON Cliente FOR DELETE AS
+/* ERwin Builtin Trigger */
+/* DELETE trigger on Cliente */
+BEGIN
+  DECLARE  @errno   int,
+           @errmsg  varchar(255)
+    /* ERwin Builtin Trigger */
+    /* Cliente  Pedido on parent delete no action */
+    /* ERWIN_RELATION:CHECKSUM="0002103a", PARENT_OWNER="", PARENT_TABLE="Cliente"
+    CHILD_OWNER="", CHILD_TABLE="Pedido"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Cliente_Pedido", FK_COLUMNS="id_Cliente""DPI" */
+    IF EXISTS (
+      SELECT * FROM deleted,Pedido
+      WHERE
+        /*  %JoinFKPK(Pedido,deleted," = "," AND") */
+        Pedido.id_Cliente = deleted.id_Cliente AND
+        Pedido.DPI = deleted.DPI
+    )
+    BEGIN
+      SELECT @errno  = 30001,
+             @errmsg = 'Cannot delete Cliente because Pedido exists.'
+      GOTO ERROR
+    END
+
+    /* ERwin Builtin Trigger */
+    /* Usuario  Cliente on child delete no action */
+    /* ERWIN_RELATION:CHECKSUM="00000000", PARENT_OWNER="", PARENT_TABLE="Usuario"
+    CHILD_OWNER="", CHILD_TABLE="Cliente"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Usuario_Cliente", FK_COLUMNS="DPI" */
+    IF EXISTS (SELECT * FROM deleted,Usuario
+      WHERE
+        /* %JoinFKPK(deleted,Usuario," = "," AND") */
+        deleted.DPI = Usuario.DPI AND
+        NOT EXISTS (
+          SELECT * FROM Cliente
+          WHERE
+            /* %JoinFKPK(Cliente,Usuario," = "," AND") */
+            Cliente.DPI = Usuario.DPI
+        )
+    )
+    BEGIN
+      SELECT @errno  = 30010,
+             @errmsg = 'Cannot delete last Cliente because Usuario exists.'
+      GOTO ERROR
+    END
+
+
+    /* ERwin Builtin Trigger */
+    RETURN
+ERROR:
+    raiserror @errno @errmsg
+    rollback transaction
+END
+
+go
+
+
+CREATE TRIGGER tU_Cliente ON Cliente FOR UPDATE AS
+/* ERwin Builtin Trigger */
+/* UPDATE trigger on Cliente */
+BEGIN
+  DECLARE  @NUMROWS int,
+           @nullcnt int,
+           @validcnt int,
+           @insid_Cliente int(7), 
+           @insDPI int(7),
+           @errno   int,
+           @errmsg  varchar(255)
+
+  SELECT @NUMROWS = @@rowcount
+  /* ERwin Builtin Trigger */
+  /* Cliente  Pedido on parent update no action */
+  /* ERWIN_RELATION:CHECKSUM="0002694d", PARENT_OWNER="", PARENT_TABLE="Cliente"
+    CHILD_OWNER="", CHILD_TABLE="Pedido"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Cliente_Pedido", FK_COLUMNS="id_Cliente""DPI" */
+  IF
+    /* %ParentPK(" OR",UPDATE) */
+    UPDATE(id_Cliente) OR
+    UPDATE(DPI)
+  BEGIN
+    IF EXISTS (
+      SELECT * FROM deleted,Pedido
+      WHERE
+        /*  %JoinFKPK(Pedido,deleted," = "," AND") */
+        Pedido.id_Cliente = deleted.id_Cliente AND
+        Pedido.DPI = deleted.DPI
+    )
+    BEGIN
+      SELECT @errno  = 30005,
+             @errmsg = 'Cannot update Cliente because Pedido exists.'
+      GOTO ERROR
+    END
+  END
+
+  /* ERwin Builtin Trigger */
+  /* Usuario  Cliente on child update no action */
+  /* ERWIN_RELATION:CHECKSUM="00000000", PARENT_OWNER="", PARENT_TABLE="Usuario"
+    CHILD_OWNER="", CHILD_TABLE="Cliente"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Usuario_Cliente", FK_COLUMNS="DPI" */
+  IF
+    /* %ChildFK(" OR",UPDATE) */
+    UPDATE(DPI)
+  BEGIN
+    SELECT @nullcnt = 0
+    SELECT @validcnt = count(*)
+      FROM inserted,Usuario
+        WHERE
+          /* %JoinFKPK(inserted,Usuario) */
+          inserted.DPI = Usuario.DPI
+    /* %NotnullFK(inserted," IS NULL","select @nullcnt = count(*) from inserted where"," AND") */
+    
+    IF @validcnt + @nullcnt != @NUMROWS
+    BEGIN
+      SELECT @errno  = 30007,
+             @errmsg = 'Cannot update Cliente because Usuario does not exist.'
+      GOTO ERROR
+    END
+  END
+
+
+  /* ERwin Builtin Trigger */
+  RETURN
+ERROR:
+    raiserror @errno @errmsg
+    rollback transaction
+END
+
+go
+
+
+
+
+CREATE TRIGGER tD_Envio ON Envio FOR DELETE AS
+/* ERwin Builtin Trigger */
+/* DELETE trigger on Envio */
+BEGIN
+  DECLARE  @errno   int,
+           @errmsg  varchar(255)
+    /* ERwin Builtin Trigger */
+    /* Pedido  Envio on child delete no action */
+    /* ERWIN_RELATION:CHECKSUM="0003532f", PARENT_OWNER="", PARENT_TABLE="Pedido"
+    CHILD_OWNER="", CHILD_TABLE="Envio"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Pedido_envio", FK_COLUMNS="id_Pedido""id_Cliente""DPI""id_producto" */
+    IF EXISTS (SELECT * FROM deleted,Pedido
+      WHERE
+        /* %JoinFKPK(deleted,Pedido," = "," AND") */
+        deleted.id_Pedido = Pedido.id_Pedido AND
+        deleted.id_Cliente = Pedido.id_Cliente AND
+        deleted.DPI = Pedido.DPI AND
+        deleted.id_producto = Pedido.id_producto AND
+        NOT EXISTS (
+          SELECT * FROM Envio
+          WHERE
+            /* %JoinFKPK(Envio,Pedido," = "," AND") */
+            Envio.id_Pedido = Pedido.id_Pedido AND
+            Envio.id_Cliente = Pedido.id_Cliente AND
+            Envio.DPI = Pedido.DPI AND
+            Envio.id_producto = Pedido.id_producto
+        )
+    )
+    BEGIN
+      SELECT @errno  = 30010,
+             @errmsg = 'Cannot delete last Envio because Pedido exists.'
+      GOTO ERROR
+    END
+
+    /* ERwin Builtin Trigger */
+    /* Factura  Envio on child delete no action */
+    /* ERWIN_RELATION:CHECKSUM="00000000", PARENT_OWNER="", PARENT_TABLE="Factura"
+    CHILD_OWNER="", CHILD_TABLE="Envio"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Factura_envio", FK_COLUMNS="No_Factura""id_Pedido""id_Cliente""DPI""id_producto" */
+    IF EXISTS (SELECT * FROM deleted,Factura
+      WHERE
+        /* %JoinFKPK(deleted,Factura," = "," AND") */
+        deleted.No_Factura = Factura.No_Factura AND
+        deleted.id_Pedido = Factura.id_Pedido AND
+        deleted.id_Cliente = Factura.id_Cliente AND
+        deleted.DPI = Factura.DPI AND
+        deleted.id_producto = Factura.id_producto AND
+        NOT EXISTS (
+          SELECT * FROM Envio
+          WHERE
+            /* %JoinFKPK(Envio,Factura," = "," AND") */
+            Envio.No_Factura = Factura.No_Factura AND
+            Envio.id_Pedido = Factura.id_Pedido AND
+            Envio.id_Cliente = Factura.id_Cliente AND
+            Envio.DPI = Factura.DPI AND
+            Envio.id_producto = Factura.id_producto
+        )
+    )
+    BEGIN
+      SELECT @errno  = 30010,
+             @errmsg = 'Cannot delete last Envio because Factura exists.'
+      GOTO ERROR
+    END
+
+
+    /* ERwin Builtin Trigger */
+    RETURN
+ERROR:
+    raiserror @errno @errmsg
+    rollback transaction
+END
+
+go
+
+
+CREATE TRIGGER tU_Envio ON Envio FOR UPDATE AS
+/* ERwin Builtin Trigger */
+/* UPDATE trigger on Envio */
+BEGIN
+  DECLARE  @NUMROWS int,
+           @nullcnt int,
+           @validcnt int,
+           @insid_Envio int(10), 
+           @insid_Pedido int(10), 
+           @insid_Cliente int(7), 
+           @insDPI int(7), 
+           @insid_producto int(6), 
+           @insNo_Factura int(10),
+           @errno   int,
+           @errmsg  varchar(255)
+
+  SELECT @NUMROWS = @@rowcount
+  /* ERwin Builtin Trigger */
+  /* Pedido  Envio on child update no action */
+  /* ERWIN_RELATION:CHECKSUM="00036cc0", PARENT_OWNER="", PARENT_TABLE="Pedido"
+    CHILD_OWNER="", CHILD_TABLE="Envio"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Pedido_envio", FK_COLUMNS="id_Pedido""id_Cliente""DPI""id_producto" */
+  IF
+    /* %ChildFK(" OR",UPDATE) */
+    UPDATE(id_Pedido) OR
+    UPDATE(id_Cliente) OR
+    UPDATE(DPI) OR
+    UPDATE(id_producto)
+  BEGIN
+    SELECT @nullcnt = 0
+    SELECT @validcnt = count(*)
+      FROM inserted,Pedido
+        WHERE
+          /* %JoinFKPK(inserted,Pedido) */
+          inserted.id_Pedido = Pedido.id_Pedido and
+          inserted.id_Cliente = Pedido.id_Cliente and
+          inserted.DPI = Pedido.DPI and
+          inserted.id_producto = Pedido.id_producto
+    /* %NotnullFK(inserted," IS NULL","select @nullcnt = count(*) from inserted where"," AND") */
+    
+    IF @validcnt + @nullcnt != @NUMROWS
+    BEGIN
+      SELECT @errno  = 30007,
+             @errmsg = 'Cannot update Envio because Pedido does not exist.'
+      GOTO ERROR
+    END
+  END
+
+  /* ERwin Builtin Trigger */
+  /* Factura  Envio on child update no action */
+  /* ERWIN_RELATION:CHECKSUM="00000000", PARENT_OWNER="", PARENT_TABLE="Factura"
+    CHILD_OWNER="", CHILD_TABLE="Envio"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Factura_envio", FK_COLUMNS="No_Factura""id_Pedido""id_Cliente""DPI""id_producto" */
+  IF
+    /* %ChildFK(" OR",UPDATE) */
+    UPDATE(No_Factura) OR
+    UPDATE(id_Pedido) OR
+    UPDATE(id_Cliente) OR
+    UPDATE(DPI) OR
+    UPDATE(id_producto)
+  BEGIN
+    SELECT @nullcnt = 0
+    SELECT @validcnt = count(*)
+      FROM inserted,Factura
+        WHERE
+          /* %JoinFKPK(inserted,Factura) */
+          inserted.No_Factura = Factura.No_Factura and
+          inserted.id_Pedido = Factura.id_Pedido and
+          inserted.id_Cliente = Factura.id_Cliente and
+          inserted.DPI = Factura.DPI and
+          inserted.id_producto = Factura.id_producto
+    /* %NotnullFK(inserted," IS NULL","select @nullcnt = count(*) from inserted where"," AND") */
+    
+    IF @validcnt + @nullcnt != @NUMROWS
+    BEGIN
+      SELECT @errno  = 30007,
+             @errmsg = 'Cannot update Envio because Factura does not exist.'
+      GOTO ERROR
+    END
+  END
+
+
+  /* ERwin Builtin Trigger */
+  RETURN
+ERROR:
+    raiserror @errno @errmsg
+    rollback transaction
+END
+
+go
+
+
+
+
+CREATE TRIGGER tD_Factura ON Factura FOR DELETE AS
+/* ERwin Builtin Trigger */
+/* DELETE trigger on Factura */
+BEGIN
+  DECLARE  @errno   int,
+           @errmsg  varchar(255)
+    /* ERwin Builtin Trigger */
+    /* Factura  Envio on parent delete no action */
+    /* ERWIN_RELATION:CHECKSUM="0002cacc", PARENT_OWNER="", PARENT_TABLE="Factura"
+    CHILD_OWNER="", CHILD_TABLE="Envio"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Factura_envio", FK_COLUMNS="No_Factura""id_Pedido""id_Cliente""DPI""id_producto" */
+    IF EXISTS (
+      SELECT * FROM deleted,Envio
+      WHERE
+        /*  %JoinFKPK(Envio,deleted," = "," AND") */
+        Envio.No_Factura = deleted.No_Factura AND
+        Envio.id_Pedido = deleted.id_Pedido AND
+        Envio.id_Cliente = deleted.id_Cliente AND
+        Envio.DPI = deleted.DPI AND
+        Envio.id_producto = deleted.id_producto
+    )
+    BEGIN
+      SELECT @errno  = 30001,
+             @errmsg = 'Cannot delete Factura because Envio exists.'
+      GOTO ERROR
+    END
+
+    /* ERwin Builtin Trigger */
+    /* Pedido  Factura on child delete no action */
+    /* ERWIN_RELATION:CHECKSUM="00000000", PARENT_OWNER="", PARENT_TABLE="Pedido"
+    CHILD_OWNER="", CHILD_TABLE="Factura"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Pedido_Factura", FK_COLUMNS="id_Pedido""id_Cliente""DPI""id_producto" */
+    IF EXISTS (SELECT * FROM deleted,Pedido
+      WHERE
+        /* %JoinFKPK(deleted,Pedido," = "," AND") */
+        deleted.id_Pedido = Pedido.id_Pedido AND
+        deleted.id_Cliente = Pedido.id_Cliente AND
+        deleted.DPI = Pedido.DPI AND
+        deleted.id_producto = Pedido.id_producto AND
+        NOT EXISTS (
+          SELECT * FROM Factura
+          WHERE
+            /* %JoinFKPK(Factura,Pedido," = "," AND") */
+            Factura.id_Pedido = Pedido.id_Pedido AND
+            Factura.id_Cliente = Pedido.id_Cliente AND
+            Factura.DPI = Pedido.DPI AND
+            Factura.id_producto = Pedido.id_producto
+        )
+    )
+    BEGIN
+      SELECT @errno  = 30010,
+             @errmsg = 'Cannot delete last Factura because Pedido exists.'
+      GOTO ERROR
+    END
+
+
+    /* ERwin Builtin Trigger */
+    RETURN
+ERROR:
+    raiserror @errno @errmsg
+    rollback transaction
+END
+
+go
+
+
+CREATE TRIGGER tU_Factura ON Factura FOR UPDATE AS
+/* ERwin Builtin Trigger */
+/* UPDATE trigger on Factura */
+BEGIN
+  DECLARE  @NUMROWS int,
+           @nullcnt int,
+           @validcnt int,
+           @insNo_Factura int(10), 
+           @insid_Pedido int(10), 
+           @insid_Cliente int(7), 
+           @insDPI int(7), 
+           @insid_producto int(6),
+           @errno   int,
+           @errmsg  varchar(255)
+
+  SELECT @NUMROWS = @@rowcount
+  /* ERwin Builtin Trigger */
+  /* Factura  Envio on parent update no action */
+  /* ERWIN_RELATION:CHECKSUM="00031965", PARENT_OWNER="", PARENT_TABLE="Factura"
+    CHILD_OWNER="", CHILD_TABLE="Envio"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Factura_envio", FK_COLUMNS="No_Factura""id_Pedido""id_Cliente""DPI""id_producto" */
+  IF
+    /* %ParentPK(" OR",UPDATE) */
+    UPDATE(No_Factura) OR
+    UPDATE(id_Pedido) OR
+    UPDATE(id_Cliente) OR
+    UPDATE(DPI) OR
+    UPDATE(id_producto)
+  BEGIN
+    IF EXISTS (
+      SELECT * FROM deleted,Envio
+      WHERE
+        /*  %JoinFKPK(Envio,deleted," = "," AND") */
+        Envio.No_Factura = deleted.No_Factura AND
+        Envio.id_Pedido = deleted.id_Pedido AND
+        Envio.id_Cliente = deleted.id_Cliente AND
+        Envio.DPI = deleted.DPI AND
+        Envio.id_producto = deleted.id_producto
+    )
+    BEGIN
+      SELECT @errno  = 30005,
+             @errmsg = 'Cannot update Factura because Envio exists.'
+      GOTO ERROR
+    END
+  END
+
+  /* ERwin Builtin Trigger */
+  /* Pedido  Factura on child update no action */
+  /* ERWIN_RELATION:CHECKSUM="00000000", PARENT_OWNER="", PARENT_TABLE="Pedido"
+    CHILD_OWNER="", CHILD_TABLE="Factura"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Pedido_Factura", FK_COLUMNS="id_Pedido""id_Cliente""DPI""id_producto" */
+  IF
+    /* %ChildFK(" OR",UPDATE) */
+    UPDATE(id_Pedido) OR
+    UPDATE(id_Cliente) OR
+    UPDATE(DPI) OR
+    UPDATE(id_producto)
+  BEGIN
+    SELECT @nullcnt = 0
+    SELECT @validcnt = count(*)
+      FROM inserted,Pedido
+        WHERE
+          /* %JoinFKPK(inserted,Pedido) */
+          inserted.id_Pedido = Pedido.id_Pedido and
+          inserted.id_Cliente = Pedido.id_Cliente and
+          inserted.DPI = Pedido.DPI and
+          inserted.id_producto = Pedido.id_producto
+    /* %NotnullFK(inserted," IS NULL","select @nullcnt = count(*) from inserted where"," AND") */
+    
+    IF @validcnt + @nullcnt != @NUMROWS
+    BEGIN
+      SELECT @errno  = 30007,
+             @errmsg = 'Cannot update Factura because Pedido does not exist.'
+      GOTO ERROR
+    END
+  END
+
+
+  /* ERwin Builtin Trigger */
+  RETURN
+ERROR:
+    raiserror @errno @errmsg
+    rollback transaction
+END
+
+go
+
+
+
+
+CREATE TRIGGER tD_Pedido ON Pedido FOR DELETE AS
+/* ERwin Builtin Trigger */
+/* DELETE trigger on Pedido */
+BEGIN
+  DECLARE  @errno   int,
+           @errmsg  varchar(255)
+    /* ERwin Builtin Trigger */
+    /* Pedido  Factura on parent delete no action */
+    /* ERWIN_RELATION:CHECKSUM="0004c4cd", PARENT_OWNER="", PARENT_TABLE="Pedido"
+    CHILD_OWNER="", CHILD_TABLE="Factura"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Pedido_Factura", FK_COLUMNS="id_Pedido""id_Cliente""DPI""id_producto" */
+    IF EXISTS (
+      SELECT * FROM deleted,Factura
+      WHERE
+        /*  %JoinFKPK(Factura,deleted," = "," AND") */
+        Factura.id_Pedido = deleted.id_Pedido AND
+        Factura.id_Cliente = deleted.id_Cliente AND
+        Factura.DPI = deleted.DPI AND
+        Factura.id_producto = deleted.id_producto
+    )
+    BEGIN
+      SELECT @errno  = 30001,
+             @errmsg = 'Cannot delete Pedido because Factura exists.'
+      GOTO ERROR
+    END
+
+    /* ERwin Builtin Trigger */
+    /* Pedido  Envio on parent delete no action */
+    /* ERWIN_RELATION:CHECKSUM="00000000", PARENT_OWNER="", PARENT_TABLE="Pedido"
+    CHILD_OWNER="", CHILD_TABLE="Envio"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Pedido_envio", FK_COLUMNS="id_Pedido""id_Cliente""DPI""id_producto" */
+    IF EXISTS (
+      SELECT * FROM deleted,Envio
+      WHERE
+        /*  %JoinFKPK(Envio,deleted," = "," AND") */
+        Envio.id_Pedido = deleted.id_Pedido AND
+        Envio.id_Cliente = deleted.id_Cliente AND
+        Envio.DPI = deleted.DPI AND
+        Envio.id_producto = deleted.id_producto
+    )
+    BEGIN
+      SELECT @errno  = 30001,
+             @errmsg = 'Cannot delete Pedido because Envio exists.'
+      GOTO ERROR
+    END
+
+    /* ERwin Builtin Trigger */
+    /* Cliente  Pedido on child delete no action */
+    /* ERWIN_RELATION:CHECKSUM="00000000", PARENT_OWNER="", PARENT_TABLE="Cliente"
+    CHILD_OWNER="", CHILD_TABLE="Pedido"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Cliente_Pedido", FK_COLUMNS="id_Cliente""DPI" */
+    IF EXISTS (SELECT * FROM deleted,Cliente
+      WHERE
+        /* %JoinFKPK(deleted,Cliente," = "," AND") */
+        deleted.id_Cliente = Cliente.id_Cliente AND
+        deleted.DPI = Cliente.DPI AND
+        NOT EXISTS (
+          SELECT * FROM Pedido
+          WHERE
+            /* %JoinFKPK(Pedido,Cliente," = "," AND") */
+            Pedido.id_Cliente = Cliente.id_Cliente AND
+            Pedido.DPI = Cliente.DPI
+        )
+    )
+    BEGIN
+      SELECT @errno  = 30010,
+             @errmsg = 'Cannot delete last Pedido because Cliente exists.'
+      GOTO ERROR
+    END
+
+    /* ERwin Builtin Trigger */
+    /* Producto  Pedido on child delete no action */
+    /* ERWIN_RELATION:CHECKSUM="00000000", PARENT_OWNER="", PARENT_TABLE="Producto"
+    CHILD_OWNER="", CHILD_TABLE="Pedido"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Producto_pedido", FK_COLUMNS="id_producto" */
+    IF EXISTS (SELECT * FROM deleted,Producto
+      WHERE
+        /* %JoinFKPK(deleted,Producto," = "," AND") */
+        deleted.id_producto = Producto.id_producto AND
+        NOT EXISTS (
+          SELECT * FROM Pedido
+          WHERE
+            /* %JoinFKPK(Pedido,Producto," = "," AND") */
+            Pedido.id_producto = Producto.id_producto
+        )
+    )
+    BEGIN
+      SELECT @errno  = 30010,
+             @errmsg = 'Cannot delete last Pedido because Producto exists.'
+      GOTO ERROR
+    END
+
+
+    /* ERwin Builtin Trigger */
+    RETURN
+ERROR:
+    raiserror @errno @errmsg
+    rollback transaction
+END
+
+go
+
+
+CREATE TRIGGER tU_Pedido ON Pedido FOR UPDATE AS
+/* ERwin Builtin Trigger */
+/* UPDATE trigger on Pedido */
+BEGIN
+  DECLARE  @NUMROWS int,
+           @nullcnt int,
+           @validcnt int,
+           @insid_Pedido int(10), 
+           @insid_Cliente int(7), 
+           @insDPI int(7), 
+           @insid_producto int(6),
+           @errno   int,
+           @errmsg  varchar(255)
+
+  SELECT @NUMROWS = @@rowcount
+  /* ERwin Builtin Trigger */
+  /* Pedido  Factura on parent update no action */
+  /* ERWIN_RELATION:CHECKSUM="00057136", PARENT_OWNER="", PARENT_TABLE="Pedido"
+    CHILD_OWNER="", CHILD_TABLE="Factura"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Pedido_Factura", FK_COLUMNS="id_Pedido""id_Cliente""DPI""id_producto" */
+  IF
+    /* %ParentPK(" OR",UPDATE) */
+    UPDATE(id_Pedido) OR
+    UPDATE(id_Cliente) OR
+    UPDATE(DPI) OR
+    UPDATE(id_producto)
+  BEGIN
+    IF EXISTS (
+      SELECT * FROM deleted,Factura
+      WHERE
+        /*  %JoinFKPK(Factura,deleted," = "," AND") */
+        Factura.id_Pedido = deleted.id_Pedido AND
+        Factura.id_Cliente = deleted.id_Cliente AND
+        Factura.DPI = deleted.DPI AND
+        Factura.id_producto = deleted.id_producto
+    )
+    BEGIN
+      SELECT @errno  = 30005,
+             @errmsg = 'Cannot update Pedido because Factura exists.'
+      GOTO ERROR
+    END
+  END
+
+  /* ERwin Builtin Trigger */
+  /* Pedido  Envio on parent update no action */
+  /* ERWIN_RELATION:CHECKSUM="00000000", PARENT_OWNER="", PARENT_TABLE="Pedido"
+    CHILD_OWNER="", CHILD_TABLE="Envio"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Pedido_envio", FK_COLUMNS="id_Pedido""id_Cliente""DPI""id_producto" */
+  IF
+    /* %ParentPK(" OR",UPDATE) */
+    UPDATE(id_Pedido) OR
+    UPDATE(id_Cliente) OR
+    UPDATE(DPI) OR
+    UPDATE(id_producto)
+  BEGIN
+    IF EXISTS (
+      SELECT * FROM deleted,Envio
+      WHERE
+        /*  %JoinFKPK(Envio,deleted," = "," AND") */
+        Envio.id_Pedido = deleted.id_Pedido AND
+        Envio.id_Cliente = deleted.id_Cliente AND
+        Envio.DPI = deleted.DPI AND
+        Envio.id_producto = deleted.id_producto
+    )
+    BEGIN
+      SELECT @errno  = 30005,
+             @errmsg = 'Cannot update Pedido because Envio exists.'
+      GOTO ERROR
+    END
+  END
+
+  /* ERwin Builtin Trigger */
+  /* Cliente  Pedido on child update no action */
+  /* ERWIN_RELATION:CHECKSUM="00000000", PARENT_OWNER="", PARENT_TABLE="Cliente"
+    CHILD_OWNER="", CHILD_TABLE="Pedido"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Cliente_Pedido", FK_COLUMNS="id_Cliente""DPI" */
+  IF
+    /* %ChildFK(" OR",UPDATE) */
+    UPDATE(id_Cliente) OR
+    UPDATE(DPI)
+  BEGIN
+    SELECT @nullcnt = 0
+    SELECT @validcnt = count(*)
+      FROM inserted,Cliente
+        WHERE
+          /* %JoinFKPK(inserted,Cliente) */
+          inserted.id_Cliente = Cliente.id_Cliente and
+          inserted.DPI = Cliente.DPI
+    /* %NotnullFK(inserted," IS NULL","select @nullcnt = count(*) from inserted where"," AND") */
+    
+    IF @validcnt + @nullcnt != @NUMROWS
+    BEGIN
+      SELECT @errno  = 30007,
+             @errmsg = 'Cannot update Pedido because Cliente does not exist.'
+      GOTO ERROR
+    END
+  END
+
+  /* ERwin Builtin Trigger */
+  /* Producto  Pedido on child update no action */
+  /* ERWIN_RELATION:CHECKSUM="00000000", PARENT_OWNER="", PARENT_TABLE="Producto"
+    CHILD_OWNER="", CHILD_TABLE="Pedido"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Producto_pedido", FK_COLUMNS="id_producto" */
+  IF
+    /* %ChildFK(" OR",UPDATE) */
+    UPDATE(id_producto)
+  BEGIN
+    SELECT @nullcnt = 0
+    SELECT @validcnt = count(*)
+      FROM inserted,Producto
+        WHERE
+          /* %JoinFKPK(inserted,Producto) */
+          inserted.id_producto = Producto.id_producto
+    /* %NotnullFK(inserted," IS NULL","select @nullcnt = count(*) from inserted where"," AND") */
+    
+    IF @validcnt + @nullcnt != @NUMROWS
+    BEGIN
+      SELECT @errno  = 30007,
+             @errmsg = 'Cannot update Pedido because Producto does not exist.'
+      GOTO ERROR
+    END
+  END
+
+
+  /* ERwin Builtin Trigger */
+  RETURN
+ERROR:
+    raiserror @errno @errmsg
+    rollback transaction
+END
+
+go
+
+
+
+
+CREATE TRIGGER tD_Producto ON Producto FOR DELETE AS
+/* ERwin Builtin Trigger */
+/* DELETE trigger on Producto */
+BEGIN
+  DECLARE  @errno   int,
+           @errmsg  varchar(255)
+    /* ERwin Builtin Trigger */
+    /* Producto  Pedido on parent delete no action */
+    /* ERWIN_RELATION:CHECKSUM="0000f8e2", PARENT_OWNER="", PARENT_TABLE="Producto"
+    CHILD_OWNER="", CHILD_TABLE="Pedido"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Producto_pedido", FK_COLUMNS="id_producto" */
+    IF EXISTS (
+      SELECT * FROM deleted,Pedido
+      WHERE
+        /*  %JoinFKPK(Pedido,deleted," = "," AND") */
+        Pedido.id_producto = deleted.id_producto
+    )
+    BEGIN
+      SELECT @errno  = 30001,
+             @errmsg = 'Cannot delete Producto because Pedido exists.'
+      GOTO ERROR
+    END
+
+
+    /* ERwin Builtin Trigger */
+    RETURN
+ERROR:
+    raiserror @errno @errmsg
+    rollback transaction
+END
+
+go
+
+
+CREATE TRIGGER tU_Producto ON Producto FOR UPDATE AS
+/* ERwin Builtin Trigger */
+/* UPDATE trigger on Producto */
+BEGIN
+  DECLARE  @NUMROWS int,
+           @nullcnt int,
+           @validcnt int,
+           @insid_producto int(6),
+           @errno   int,
+           @errmsg  varchar(255)
+
+  SELECT @NUMROWS = @@rowcount
+  /* ERwin Builtin Trigger */
+  /* Producto  Pedido on parent update no action */
+  /* ERWIN_RELATION:CHECKSUM="0001154b", PARENT_OWNER="", PARENT_TABLE="Producto"
+    CHILD_OWNER="", CHILD_TABLE="Pedido"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Producto_pedido", FK_COLUMNS="id_producto" */
+  IF
+    /* %ParentPK(" OR",UPDATE) */
+    UPDATE(id_producto)
+  BEGIN
+    IF EXISTS (
+      SELECT * FROM deleted,Pedido
+      WHERE
+        /*  %JoinFKPK(Pedido,deleted," = "," AND") */
+        Pedido.id_producto = deleted.id_producto
+    )
+    BEGIN
+      SELECT @errno  = 30005,
+             @errmsg = 'Cannot update Producto because Pedido exists.'
+      GOTO ERROR
+    END
+  END
+
+
+  /* ERwin Builtin Trigger */
+  RETURN
+ERROR:
+    raiserror @errno @errmsg
+    rollback transaction
+END
+
+go
+
+
+
+
+CREATE TRIGGER tD_Usuario ON Usuario FOR DELETE AS
+/* ERwin Builtin Trigger */
+/* DELETE trigger on Usuario */
+BEGIN
+  DECLARE  @errno   int,
+           @errmsg  varchar(255)
+    /* ERwin Builtin Trigger */
+    /* Usuario  Administrador on parent delete no action */
+    /* ERWIN_RELATION:CHECKSUM="0001dfa7", PARENT_OWNER="", PARENT_TABLE="Usuario"
+    CHILD_OWNER="", CHILD_TABLE="Administrador"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Usuario_Empleado", FK_COLUMNS="DPI" */
+    IF EXISTS (
+      SELECT * FROM deleted,Administrador
+      WHERE
+        /*  %JoinFKPK(Administrador,deleted," = "," AND") */
+        Administrador.DPI = deleted.DPI
+    )
+    BEGIN
+      SELECT @errno  = 30001,
+             @errmsg = 'Cannot delete Usuario because Administrador exists.'
+      GOTO ERROR
+    END
+
+    /* ERwin Builtin Trigger */
+    /* Usuario  Cliente on parent delete no action */
+    /* ERWIN_RELATION:CHECKSUM="00000000", PARENT_OWNER="", PARENT_TABLE="Usuario"
+    CHILD_OWNER="", CHILD_TABLE="Cliente"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Usuario_Cliente", FK_COLUMNS="DPI" */
+    IF EXISTS (
+      SELECT * FROM deleted,Cliente
+      WHERE
+        /*  %JoinFKPK(Cliente,deleted," = "," AND") */
+        Cliente.DPI = deleted.DPI
+    )
+    BEGIN
+      SELECT @errno  = 30001,
+             @errmsg = 'Cannot delete Usuario because Cliente exists.'
+      GOTO ERROR
+    END
+
+
+    /* ERwin Builtin Trigger */
+    RETURN
+ERROR:
+    raiserror @errno @errmsg
+    rollback transaction
+END
+
+go
+
+
+CREATE TRIGGER tU_Usuario ON Usuario FOR UPDATE AS
+/* ERwin Builtin Trigger */
+/* UPDATE trigger on Usuario */
+BEGIN
+  DECLARE  @NUMROWS int,
+           @nullcnt int,
+           @validcnt int,
+           @insDPI int(7),
+           @errno   int,
+           @errmsg  varchar(255)
+
+  SELECT @NUMROWS = @@rowcount
+  /* ERwin Builtin Trigger */
+  /* Usuario  Administrador on parent update no action */
+  /* ERWIN_RELATION:CHECKSUM="0001fec9", PARENT_OWNER="", PARENT_TABLE="Usuario"
+    CHILD_OWNER="", CHILD_TABLE="Administrador"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Usuario_Empleado", FK_COLUMNS="DPI" */
+  IF
+    /* %ParentPK(" OR",UPDATE) */
+    UPDATE(DPI)
+  BEGIN
+    IF EXISTS (
+      SELECT * FROM deleted,Administrador
+      WHERE
+        /*  %JoinFKPK(Administrador,deleted," = "," AND") */
+        Administrador.DPI = deleted.DPI
+    )
+    BEGIN
+      SELECT @errno  = 30005,
+             @errmsg = 'Cannot update Usuario because Administrador exists.'
+      GOTO ERROR
+    END
+  END
+
+  /* ERwin Builtin Trigger */
+  /* Usuario  Cliente on parent update no action */
+  /* ERWIN_RELATION:CHECKSUM="00000000", PARENT_OWNER="", PARENT_TABLE="Usuario"
+    CHILD_OWNER="", CHILD_TABLE="Cliente"
+    P2C_VERB_PHRASE="", C2P_VERB_PHRASE="", 
+    FK_CONSTRAINT="Usuario_Cliente", FK_COLUMNS="DPI" */
+  IF
+    /* %ParentPK(" OR",UPDATE) */
+    UPDATE(DPI)
+  BEGIN
+    IF EXISTS (
+      SELECT * FROM deleted,Cliente
+      WHERE
+        /*  %JoinFKPK(Cliente,deleted," = "," AND") */
+        Cliente.DPI = deleted.DPI
+    )
+    BEGIN
+      SELECT @errno  = 30005,
+             @errmsg = 'Cannot update Usuario because Cliente exists.'
+      GOTO ERROR
+    END
+  END
+
+
+  /* ERwin Builtin Trigger */
+  RETURN
+ERROR:
+    raiserror @errno @errmsg
+    rollback transaction
+END
+
+go
+
